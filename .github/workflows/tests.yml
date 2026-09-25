@@ -12,7 +12,33 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: curl
+          extensions: curl, openssl, pdo_sqlite
           coverage: none
-      - run: find src tests -name '*.php' -exec php -l {} \;
-      - run: php tests/run.php
+      - run: find src class core admin tests -name '*.php' -exec php -l {} \;
+      - run: php tests/module.php
+
+  mariadb:
+    runs-on: ubuntu-latest
+    services:
+      database:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: test-only-password
+          MARIADB_DATABASE: dolimed_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: curl, openssl, pdo_mysql
+          coverage: none
+      - run: php tests/module.php
+        env:
+          DOLIMED_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=dolimed_test
+          DOLIMED_TEST_USER: root
+          DOLIMED_TEST_PASSWORD: test-only-password
