@@ -90,6 +90,10 @@ $outbox->finish($first, 'worker-b', array('state' => 'done'));
 check(latestRow()->state === 'pending', 'Wrong worker cannot finish');
 $outbox->finish($first, 'worker-a', array('next_attempt' => 0));
 check(count((new \Relaxit\DolimedNotif\Outbox($db, 2))->due(time())) === 0, 'Queue isolated by entity');
+check($outbox->claim($first, time(), 'worker-a'), 'Reclaim due pending request');
+$outbox->finish($first, 'worker-a', array('state' => 'tracking', 'remote_id' => '01K50000000000000000000000', 'next_attempt' => time() + 300));
+check(!$outbox->claim($first, time(), 'worker-stale'), 'Stale selection cannot claim an already accepted request');
+resetQueue(); capture();
 
 $posts = array(); $polls = 0; $tenant = 'WRONG'; $postCode = 202; $remoteStatus = 'queued';
 $factory = function ($config) use (&$posts, &$polls, &$tenant, &$postCode, &$remoteStatus) {

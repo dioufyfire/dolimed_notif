@@ -48,7 +48,9 @@ class Outbox
     public function claim($row, $now, $token)
     {
         $result = $this->query('UPDATE '.$this->table.' SET lease_until='.(int) ($now + 300).',lease_token='.$this->quote($token)
-            .' WHERE rowid='.(int) $row->rowid.' AND entity='.$this->entity.' AND lease_until<='.(int) $now." AND state IN ('pending','tracking')");
+            .' WHERE rowid='.(int) $row->rowid.' AND entity='.$this->entity.' AND lease_until<='.(int) $now
+            .' AND next_attempt<='.(int) $now.' AND state='.$this->quote($row->state)
+            .' AND remote_id '.($row->remote_id === null ? 'IS NULL' : '='.$this->quote($row->remote_id)));
         return $this->db->affected_rows($result) === 1;
     }
     public function finish($row, $token, array $values)
