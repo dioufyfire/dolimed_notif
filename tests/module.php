@@ -32,7 +32,7 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $schema = str_replace('llx_', MAIN_DB_PREFIX, file_get_contents(__DIR__.'/../sql/llx_dolimednotif_outbox.sql'));
 if (strpos($dsn, 'sqlite:') === 0) {
     $schema = str_replace('integer AUTO_INCREMENT PRIMARY KEY', 'integer PRIMARY KEY AUTOINCREMENT', $schema);
-    $schema = str_replace('UNIQUE KEY uk_dolimednotif_event (entity, fk_action),', 'UNIQUE (entity, fk_action)', $schema);
+    $schema = str_replace('UNIQUE KEY uk_dolimednotif_event (entity, fk_action, event_kind, revision),', 'UNIQUE (entity, fk_action, event_kind, revision)', $schema);
     $schema = preg_replace('/\s*INDEX idx_dolimednotif_due[^\n]+/', '', $schema);
     $schema = str_replace(' ENGINE=innodb', '', $schema);
 }
@@ -131,4 +131,5 @@ resetQueue(); capture(); $config['installation_id'] = 'different-site'; saveConf
 check($worker->run() === 0 && latestRow()->last_error === 'destination_changed' && count($posts) === 0, 'Destination change blocks replay');
 $config['enabled'] = false; saveConfig($config);
 check(capture() === 0 && $worker->run() === 0 && count($posts) === 0, 'Disabled connector has no side effects');
+require __DIR__.'/lifecycle.php';
 echo $count." total assertions OK (module + client, ".$pdo->getAttribute(PDO::ATTR_DRIVER_NAME).")\n";

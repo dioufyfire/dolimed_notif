@@ -11,11 +11,16 @@ return array(
         'encryption_key' => 'REPLACE_WITH_OPENSSL_RAND_HEX_32',
         'timezone' => 'Africa/Dakar',
         'clinic_name' => 'Globale Santé',
-        'template' => 'jaspers_market_order_confirmation_v1',
+        'template' => 'globale_sante_confirmation_rdv',
+        // Enable only after module upgrade and RelaxIT additional templates deployment.
+        'lifecycle_enabled' => false,
+        'updated_template' => 'globale_sante_modification_rdv',
+        'cancelled_template' => 'globale_sante_annulation_rdv',
+        'reminder_template' => 'globale_sante_rappel_rdv',
         'variables' => array(
-            'customer_name' => 'patient_name',
-            'order_reference' => 'appointment_reference',
-            'order_date' => 'appointment_date'
+            'patient_name' => 'patient_name',
+            'appointment_date' => 'appointment_date',
+            'appointment_time' => 'appointment_time'
         )
     )
 );

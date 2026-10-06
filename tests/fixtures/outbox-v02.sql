@@ -1,0 +1,20 @@
+CREATE TABLE llx_dolimednotif_outbox (
+ rowid integer AUTO_INCREMENT PRIMARY KEY,
+ entity integer NOT NULL,
+ fk_action integer NOT NULL,
+ fk_soc integer NOT NULL,
+ request_key varchar(80) NOT NULL,
+ destination_hash varchar(64) NOT NULL,
+ payload text NOT NULL,
+ state varchar(24) NOT NULL DEFAULT 'pending',
+ remote_id varchar(26) NULL,
+ remote_status varchar(32) NULL,
+ attempts integer NOT NULL DEFAULT 0,
+ last_error varchar(64) NULL,
+ created_at integer NOT NULL,
+ next_attempt integer NOT NULL,
+ lease_until integer NOT NULL DEFAULT 0,
+ lease_token varchar(64) NULL,
+ UNIQUE KEY uk_dolimednotif_event (entity, fk_action),
+ INDEX idx_dolimednotif_due (entity, state, next_attempt)
+) ENGINE=innodb;

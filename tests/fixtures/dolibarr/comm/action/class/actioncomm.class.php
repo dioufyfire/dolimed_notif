@@ -1,7 +1,7 @@
 <?php
 class ActionComm
 {
-    public $id, $entity, $socid, $type_code, $datep, $datef, $fulldayevent;
+    public $id, $entity, $socid, $type_code, $datep, $datef, $fulldayevent, $oldcopy, $note, $percentage;
     public function __construct($db) {}
     public function fetch($id)
     {

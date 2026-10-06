@@ -10,8 +10,8 @@ class modDolimedNotif extends DolibarrModules
         $this->rights_class = 'dolimednotif';
         $this->family = 'interface';
         $this->name = 'DolimedNotif';
-        $this->description = 'Confirmations de rendez-vous via RelaxIT Notify';
-        $this->version = '0.2.0';
+        $this->description = 'Notifications de rendez-vous via RelaxIT Notify';
+        $this->version = '0.3.0';
         $this->const_name = 'MAIN_MODULE_DOLIMEDNOTIF';
         $this->picto = 'email';
         $this->module_parts = array('triggers' => 1);
@@ -36,6 +36,11 @@ class modDolimedNotif extends DolibarrModules
     {
         global $conf;
         if ($this->_load_tables('/dolimednotif/sql/') < 0) {
+            return -1;
+        }
+        require_once __DIR__.'/../../class/bootstrap.php';
+        if (!\Relaxit\DolimedNotif\Schema::upgrade($this->db)) {
+            $this->error = 'Migration Dolimed Notif impossible. Conserver la sauvegarde et vérifier le schéma.';
             return -1;
         }
         require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';

@@ -3,6 +3,11 @@ CREATE TABLE llx_dolimednotif_outbox (
  entity integer NOT NULL,
  fk_action integer NOT NULL,
  fk_soc integer NOT NULL,
+ event_kind varchar(16) NOT NULL DEFAULT 'created',
+ revision integer NOT NULL DEFAULT 1,
+ source_hash varchar(64) NULL,
+ expires_at integer NOT NULL DEFAULT 0,
+ accepted_at integer NOT NULL DEFAULT 0,
  request_key varchar(80) NOT NULL,
  destination_hash varchar(64) NOT NULL,
  payload text NOT NULL,
@@ -15,6 +20,6 @@ CREATE TABLE llx_dolimednotif_outbox (
  next_attempt integer NOT NULL,
  lease_until integer NOT NULL DEFAULT 0,
  lease_token varchar(64) NULL,
- UNIQUE KEY uk_dolimednotif_event (entity, fk_action),
+ UNIQUE KEY uk_dolimednotif_event (entity, fk_action, event_kind, revision),
  INDEX idx_dolimednotif_due (entity, state, next_attempt)
 ) ENGINE=innodb;
