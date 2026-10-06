@@ -49,27 +49,49 @@ class DolimedNotifWorker
                     $outbox->finish($row, $token, array('state' => 'review', 'last_error' => 'destination_changed'));
                     continue;
                 }
-                if ((!$row->remote_id && (int) $row->attempts >= 5) || ($row->remote_id && time() - (int) $row->created_at > 7 * 86400)) {
+                if ((!$row->remote_id && (int) $row->attempts >= 5) || ($row->remote_id && time() - (int) ($row->accepted_at ?: $row->created_at) > 7 * 86400)) {
                     $outbox->finish($row, $token, array('state' => 'review', 'last_error' => 'retry_window_exhausted'));
                     continue;
                 }
                 if (!$row->remote_id) {
+                    if ($row->event_kind !== 'created' && empty($config['lifecycle_enabled'])) {
+                        $outbox->finish($row, $token, array('state' => 'review', 'last_error' => 'lifecycle_disabled'));
+                        continue;
+                    }
+                    if ((int) $row->expires_at > 0 && time() >= (int) $row->expires_at) {
+                        $outbox->finish($row, $token, array('state' => (int) $row->attempts > 0 ? 'review' : 'cancelled', 'last_error' => 'notification_expired', 'payload' => ''));
+                        continue;
+                    }
+                    $dependency = $outbox->dependency($row);
+                    if ($dependency !== 'ready') {
+                        $outbox->finish($row, $token, array('state' => $dependency === 'review' ? 'review' : 'pending',
+                            'last_error' => 'previous_notification_'.$dependency, 'next_attempt' => time() + 60));
+                        continue;
+                    }
                     $prepared = $cipher->decrypt($row->payload);
+                    if ($row->event_kind === 'reminder' && time() < (int) $prepared['source']['datep'] - 86400) {
+                        $outbox->finish($row, $token, array('next_attempt' => (int) $prepared['source']['datep'] - 86400));
+                        continue;
+                    }
                     $event = new ActionComm($this->db);
                     $patient = new Societe($this->db);
-                    if ($event->fetch($row->fk_action) <= 0 || $patient->fetch($row->fk_soc) <= 0 || $patient->fetch_optionals() < 0
-                        || !\Relaxit\DolimedNotif\AgendaAdapter::stillEligible($event, $patient, $entity, $prepared['source'], time())) {
+                    $found = $event->fetch($row->fk_action);
+                    if ($found < 0 || $patient->fetch($row->fk_soc) < 0 || $patient->fetch_optionals() < 0) {
+                        throw new RuntimeException('source_unavailable');
+                    }
+                    $eligible = $row->event_kind === 'cancelled'
+                        ? ($found == 0 && \Relaxit\DolimedNotif\AgendaAdapter::cancellationEligible($patient, $entity, $prepared['source'], time()))
+                        : ($found > 0 && \Relaxit\DolimedNotif\AgendaAdapter::stillEligible($event, $patient, $entity, $prepared['source'], time()));
+                    if ($row->event_kind === 'reminder' && isset($event->percentage) && (int) $event->percentage >= 100) {
+                        $eligible = false;
+                    }
+                    if (!$eligible) {
                         $outbox->finish($row, $token, array('state' => (int) $row->attempts > 0 ? 'review' : 'cancelled', 'last_error' => 'source_changed', 'payload' => ''));
                         continue;
                     }
-                    // Persist the attempt BEFORE HTTP: a crash may hide an accepted response.
+                    // Fenced reservation: a concurrent agenda change can cancel an unsent row.
+                    if (!$outbox->markAttempt($row, $token)) { continue; }
                     $row->attempts = (int) $row->attempts + 1;
-                    // Keep lease while marking the attempt, rather than releasing it before HTTP.
-                    $sql = 'UPDATE '.MAIN_DB_PREFIX.'dolimednotif_outbox SET attempts='.(int) $row->attempts
-                        .' WHERE rowid='.(int) $row->rowid.' AND entity='.$entity." AND lease_token='".$this->db->escape($token)."'";
-                    if (!$this->db->query($sql)) {
-                        throw new RuntimeException('database_unavailable');
-                    }
                     $result = $client->submit($prepared['payload'], $prepared['idempotency_key']);
                 } else {
                     $result = $client->status($row->remote_id);
@@ -88,10 +110,11 @@ class DolimedNotifWorker
                 }
                 $data = $result['data']['data'];
                 $done = in_array($data['status'], array('read', 'failed', 'blocked'), true);
-                $expired = time() - (int) $row->created_at > 7 * 86400;
+                $acceptedAt = (int) ($row->accepted_at ?: ($row->remote_id ? $row->created_at : time()));
+                $expired = time() - $acceptedAt > 7 * 86400;
                 $outbox->finish($row, $token, array('remote_id' => $data['id'], 'remote_status' => $data['status'],
                     'state' => $done ? 'done' : ($expired ? 'review' : 'tracking'), 'last_error' => $expired && !$done ? 'tracking_expired' : null,
-                    'next_attempt' => time() + 300, 'payload' => ''));
+                    'next_attempt' => time() + 300, 'payload' => '', 'accepted_at' => $acceptedAt));
             }
             $this->output = $count.' demande(s) traitée(s).';
             return 0;

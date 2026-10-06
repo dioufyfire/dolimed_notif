@@ -38,6 +38,13 @@ class AgendaAdapter
             'datef' => (int) $event->datef, 'mobile' => $mobile);
         return $prepared;
     }
+    public static function cancellationEligible($patient, $entity, array $source, $now)
+    {
+        $consent = isset($patient->array_options['options_dolimednotif_whatsapp']) ? $patient->array_options['options_dolimednotif_whatsapp'] : 0;
+        return (int) $patient->id === (int) $source['socid'] && (int) $patient->entity === (int) $entity
+            && in_array($consent, array(1, '1', true), true) && (int) $source['datep'] > $now
+            && self::mobile(isset($patient->phone_mobile) ? $patient->phone_mobile : '') === $source['mobile'];
+    }
     public static function stillEligible($event, $patient, $entity, array $source, $now)
     {
         $consent = isset($patient->array_options['options_dolimednotif_whatsapp']) ? $patient->array_options['options_dolimednotif_whatsapp'] : 0;
