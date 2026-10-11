@@ -11,7 +11,7 @@ class modDolimedNotif extends DolibarrModules
         $this->family = 'interface';
         $this->name = 'DolimedNotif';
         $this->description = 'Notifications de rendez-vous via RelaxIT Notify';
-        $this->version = '0.3.0';
+        $this->version = '0.3.1';
         $this->const_name = 'MAIN_MODULE_DOLIMEDNOTIF';
         $this->picto = 'email';
         $this->module_parts = array('triggers' => 1);

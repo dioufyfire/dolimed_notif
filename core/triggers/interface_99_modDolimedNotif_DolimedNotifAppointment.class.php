@@ -11,7 +11,7 @@ class InterfaceDolimedNotifAppointment extends DolibarrTriggers
         $this->name = 'DolimedNotifAppointment';
         $this->family = 'dolimednotif';
         $this->description = 'Notifications des rendez-vous via RelaxIT Notify';
-        $this->version = '0.3.0';
+        $this->version = '0.3.1';
         $this->picto = 'email';
     }
     public function runTrigger($action, $object, $user, $langs, $conf)

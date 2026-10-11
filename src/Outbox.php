@@ -24,6 +24,19 @@ class Outbox
     {
         return $value === null ? 'NULL' : "'".$this->db->escape((string) $value)."'";
     }
+    public function summary($now)
+    {
+        $now = (int) $now;
+        $result = $this->query("SELECT "
+            ."SUM(CASE WHEN state='review' THEN 1 ELSE 0 END) AS review, "
+            ."SUM(CASE WHEN remote_status IN ('failed','blocked') THEN 1 ELSE 0 END) AS remote_errors, "
+            ."SUM(CASE WHEN event_kind='reminder' AND state='pending' AND remote_id IS NULL AND expires_at>".$now." THEN 1 ELSE 0 END) AS pending_reminders, "
+            ."SUM(CASE WHEN event_kind='reminder' AND remote_id IS NULL AND (last_error='notification_expired' OR (state='pending' AND expires_at>0 AND expires_at<=".$now.")) THEN 1 ELSE 0 END) AS expired_reminders "
+            .'FROM '.$this->table.' WHERE entity='.$this->entity);
+        $row = $this->db->fetch_object($result);
+        return array('review' => (int) $row->review, 'remote_errors' => (int) $row->remote_errors,
+            'pending_reminders' => (int) $row->pending_reminders, 'expired_reminders' => (int) $row->expired_reminders);
+    }
     public function latest($eventId)
     {
         return $this->db->fetch_object($this->query('SELECT * FROM '.$this->table.' WHERE entity='.$this->entity.' AND fk_action='.(int) $eventId.

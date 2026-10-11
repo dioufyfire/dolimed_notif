@@ -25,6 +25,14 @@ print '<p>Configuration serveur : documents/dolimednotif/config.php. La tâche p
     .'Seuls les rendez-vous futurs AC_RDV avec mobile international et accord WhatsApp sont retenus.</p>';
 print '<p>Les modifications de date, suppressions et rappels à 24 h nécessitent lifecycle_enabled=true. Les rappels dépassés de plus d’une heure ne sont pas envoyés.</p>';
 print '<p>Le journal ne se rafraîchit pas automatiquement. Les statuts sont consultés toutes les cinq minutes. Aucun bouton ne renvoie un message.</p>';
+try {
+    $summary = (new \Relaxit\DolimedNotif\Outbox($db, (int) $conf->entity))->summary(time());
+    print '<h2>File locale — toutes dates</h2><table class="noborder centpercent"><tr class="liste_titre"><td>À vérifier</td><td>Échecs ou blocages RelaxIT</td><td>Rappels en attente</td><td>Rappels dépassés ou expirés avant transmission</td></tr><tr>';
+    foreach ($summary as $value) { print '<td><strong>'.(int) $value.'</strong></td>'; }
+    print '</tr></table><p>Ces compteurs couvrent uniquement cette entité. Les rappels annulés à la suite d’un changement ne sont pas des rappels expirés. Les états historiques restent comptés ; ce ne sont pas des alertes acquittées. Recharger la page pour actualiser.</p>';
+} catch (Exception $exception) {
+    print '<p>Récapitulatif indisponible. Vérifier la migration du module.</p>';
+}
 $sql = 'SELECT fk_action, event_kind, revision, state, remote_id, remote_status, last_error, attempts, next_attempt FROM '.MAIN_DB_PREFIX.'dolimednotif_outbox WHERE entity='.(int) $conf->entity.' ORDER BY rowid DESC LIMIT 50';
 $result = $db->query($sql);
 if ($result) {

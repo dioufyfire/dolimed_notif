@@ -132,4 +132,15 @@ check($worker->run() === 0 && latestRow()->last_error === 'destination_changed' 
 $config['enabled'] = false; saveConfig($config);
 check(capture() === 0 && $worker->run() === 0 && count($posts) === 0, 'Disabled connector has no side effects');
 require __DIR__.'/lifecycle.php';
+resetQueue();
+$summaryBox = new \Relaxit\DolimedNotif\Outbox($db, 1);
+check($summaryBox->summary(time()) === array('review' => 0, 'remote_errors' => 0, 'pending_reminders' => 0, 'expired_reminders' => 0), 'Empty summary has explicit zeros');
+$insert = $pdo->prepare("INSERT INTO test_dolimednotif_outbox (entity,fk_action,fk_soc,event_kind,revision,request_key,destination_hash,payload,state,remote_status,created_at,next_attempt,expires_at,last_error) VALUES (?,42,20,?,?,'test-key','binding','',?,?,100,100,?,?)");
+$insert->execute(array(1, 'reminder', 1, 'pending', null, time() + 3600, null));
+$insert->execute(array(1, 'reminder', 2, 'pending', null, time() - 10, null));
+$insert->execute(array(1, 'reminder', 3, 'cancelled', null, time() - 10, 'source_changed'));
+$insert->execute(array(1, 'created', 1, 'review', null, 0, 'source_changed'));
+$insert->execute(array(1, 'updated', 2, 'done', 'failed', 0, null));
+$insert->execute(array(2, 'reminder', 1, 'pending', null, time() - 10, null));
+check($summaryBox->summary(time()) === array('review' => 1, 'remote_errors' => 1, 'pending_reminders' => 1, 'expired_reminders' => 1), 'Summary distinguishes planned, expired and superseded reminders and isolates entity');
 echo $count." total assertions OK (module + client, ".$pdo->getAttribute(PDO::ATTR_DRIVER_NAME).")\n";
