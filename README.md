@@ -1,4 +1,4 @@
-# Dolimed Notif — rendez-vous RelaxIT Notify (0.3.0)
+# Dolimed Notif — rendez-vous RelaxIT Notify (0.3.1)
 
 Module externe pour l’agenda Dolibarr : les patients sont des tiers, leur numéro WhatsApp est `Societe::phone_mobile`. Le module ajoute un champ supplémentaire **Accord WhatsApp — rendez-vous via RelaxIT**, décoché par défaut. Il ne modifie pas le cœur Dolibarr.
 
@@ -9,6 +9,14 @@ La première version installable cible **Dolibarr 22.0.1**, à partir des fichie
 Le client et le traitement sont testés sur PHP 5.6, 7.4, 8.2 et 8.4 avec SQLite, et sur MariaDB 10.11. Les objets Dolibarr sont simulés dans ces tests ; ils ne remplacent pas la recette dans une véritable installation. Le schéma livré cible MySQL/MariaDB avec tables InnoDB ; PostgreSQL n’est pas validé pour ce module (RelaxIT Notify garde sa propre base PostgreSQL).
 
 Sources de référence : [création d’événement Dolibarr 22.0.1](https://github.com/Dolibarr/dolibarr/blob/22.0.1/htdocs/comm/action/class/actioncomm.class.php), [Dolibarr 11.0.3](https://github.com/Dolibarr/dolibarr/blob/11.0.3/htdocs/comm/action/class/actioncomm.class.php), [Dolibarr 9.0.4](https://github.com/Dolibarr/dolibarr/blob/9.0.4/htdocs/comm/action/class/actioncomm.class.php).
+
+## Suivi quotidien — version 0.3.1
+
+La page de configuration du module affiche maintenant un récapitulatif **File locale — toutes dates** : demandes à vérifier, échecs/blocages connus de RelaxIT, rappels en attente et rappels dépassés ou expirés avant transmission. Il est réservé aux administrateurs de l'entité courante. Les annulations normales après modification ou suppression ne sont pas comptées comme rappels expirés. Les compteurs sont historiques, sans acquittement automatique ni bouton de renvoi.
+
+Les rappels abandonnés localement ne sont pas exportés dans RelaxIT : consulter ce récapitulatif pour les contrôler. La version RelaxIT `codex/operations-dashboard` montre les demandes qu'elle connaît, les erreurs et le plafond global réservé aux rôles plateforme.
+
+Depuis 0.3.0 : sauvegarder le module et suspendre sa tâche planifiée, remplacer les fichiers par l'archive **module_dolimednotif-0.3.1.zip**, puis réactiver la tâche. Aucune migration supplémentaire ni modification de `config.php` n'est nécessaire. Le fonctionnement des confirmations, modifications, suppressions et rappels reste identique. Depuis 0.2, suivre d'abord la procédure de migration ci-dessous avec l'archive 0.3.1.
 
 ## Mise à jour depuis 0.2.0 : modifications, suppressions et rappel à 24 h
 
@@ -28,7 +36,7 @@ Les trois modèles doivent être approuvés dans le même WABA, en français, av
 
 1. Sauvegarder la base, le dossier du module et `documents/dolimednotif/config.php`. Prévoir une courte fenêtre sans modification de l'agenda.
 2. Désactiver la tâche **Dolimed Notif : confirmations et statuts**, puis désactiver le module. Ne pas supprimer la table ni la configuration.
-3. Remplacer le contenu du dossier `htdocs/custom/dolimednotif` par l'archive **module_dolimednotif-0.3.0.zip**. Ne pas toucher aux dossiers `comm`/`societe` du cœur.
+3. Remplacer le contenu du dossier `htdocs/custom/dolimednotif` par l'archive **module_dolimednotif-0.3.1.zip**. Ne pas toucher aux dossiers `comm`/`societe` du cœur.
 4. Réactiver le module. Son activation met à jour la table existante : type de message, version de rendez-vous, échéance et début de suivi. Les lignes, payloads chiffrés, références RelaxIT et clés d'idempotence 0.2 sont conservés. Cette migration MySQL/MariaDB a été testée sur MariaDB 10.11 et est réexécutable. En cas d'erreur de migration, laisser la tâche désactivée et conserver la sauvegarde ; ne pas vider la table pour contourner l'erreur.
 5. Dans le fichier serveur existant `/var/www/dolimed/documents/dolimednotif/config.php`, ajouter à l'entrée de l'entité, sans remplacer ses clés ni son identifiant :
 
@@ -105,7 +113,7 @@ La table conserve les références et les payloads encore nécessaires aux tenta
 
 ```bash
 php tests/module.php
-python3 scripts/package.py /tmp/module_dolimednotif-0.3.0.zip
+python3 scripts/package.py /tmp/module_dolimednotif-0.3.1.zip
 ```
 
 Les tests n’appellent ni Meta ni la production. Le packaging utilise une liste explicite de fichiers du module et exclut tests, Git et secrets locaux. Pour les tests MariaDB, utiliser une base jetable avec `DOLIMED_TEST_DSN`, `DOLIMED_TEST_USER`, `DOLIMED_TEST_PASSWORD` ; le test supprime uniquement sa table `test_dolimednotif_outbox` dans cette base.
